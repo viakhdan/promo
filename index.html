@@ -77,6 +77,17 @@
     background: linear-gradient(to top, rgba(0,0,0,.78), rgba(0,0,0,0));
     pointer-events: none;
   }
+  .mark {
+    position: absolute; left: 50%; top: 42%;
+    width: 150px; height: 150px;
+    display: grid; place-items: center;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .28);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.6);
+    pointer-events: none;
+  }
   .action {
     display: grid; place-items: center;
     border-radius: 9999px;
@@ -155,6 +166,8 @@
     return `
       <img src="${p.img}" alt="${p.name}" style="object-position:${p.pos}" draggable="false">
       <div class="shade"></div>
+      <div class="mark yes" aria-hidden="true"><svg width="92" height="92" viewBox="0 0 24 24" fill="none" stroke="#1fc76a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L19.5 7"/></svg></div>
+      <div class="mark no" aria-hidden="true"><svg width="84" height="84" viewBox="0 0 24 24" fill="none" stroke="#ff2d4a" stroke-width="3.4" stroke-linecap="round"><path d="M5.5 5.5l13 13M18.5 5.5l-13 13"/></svg></div>
       <div class="absolute left-0 right-0 bottom-0 p-5 text-white pointer-events-none">
         <div class="flex items-baseline gap-2">
           <span class="text-[2rem] font-extrabold leading-none">${p.name}</span>
@@ -194,6 +207,17 @@
     showToast.t = setTimeout(() => toast.style.opacity = 0, 1200);
   }
 
+  // Big check (right) / cross (left) that grows as the card is dragged
+  function setMarks(card, dx) {
+    const t = Math.min(Math.abs(dx) / 100, 1);
+    const yes = card.querySelector('.mark.yes');
+    const no = card.querySelector('.mark.no');
+    const s = `translate(-50%, -50%) scale(${0.6 + 0.4 * t})`;
+    yes.style.opacity = dx > 0 ? t : 0;
+    no.style.opacity = dx < 0 ? t : 0;
+    yes.style.transform = no.style.transform = s;
+  }
+
   // dir: +1 = right (YES), -1 = left (NO)
   function fling(card, dir) {
     if (!card || busy) return;
@@ -201,6 +225,7 @@
     const w = window.innerWidth;
     card.style.transition = reduceMotion ? 'none' : 'transform .35s ease-out';
     card.style.transform = `translate(${dir * w * 1.4}px, -40px) rotate(${dir * 28}deg)`;
+    setMarks(card, dir * 200);
     if (dir > 0) showToast(`You liked ${card.dataset.name}`);
     if (navigator.vibrate) navigator.vibrate(10);
     setTimeout(() => {
@@ -233,6 +258,7 @@
       if (!dragging) return;
       dx = e.clientX - startX; dy = e.clientY - startY;
       card.style.transform = `translate(${dx}px, ${dy * 0.3}px) rotate(${dx / 18}deg)`;
+      setMarks(card, dx);
     });
     const end = () => {
       if (!dragging) return;
@@ -243,6 +269,7 @@
       } else {
         card.style.transition = 'transform .3s cubic-bezier(.2,.8,.3,1.2)';
         card.style.transform = 'none';
+        setMarks(card, 0);
       }
     };
     card.addEventListener('pointerup', end);
